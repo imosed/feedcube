@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block title %}
+    Form Page
+{% endblock %}
+
+{% block page_title %}
+    Content
+{% endblock %}
+
+{% block content %}
+    <form action="{{ request.path }}" method="POST">
+        {{ form.csrf_token }}
+        {% for field in form %}
+            <div class="form-field">{{ field.label }} {{ field }}</div>
+        {% endfor %}
+    <button type="submit">{% block submit_text %}Submit{% endblock %}</button>
+    </form>
+{% endblock %}

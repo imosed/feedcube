@@ -1,0 +1,4 @@
+.form-field label {
+    min-width: 6em;
+    display: inline-block;
+}

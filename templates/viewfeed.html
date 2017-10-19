@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block page_title %}
+    {{ feed.feed_name }}
+{% endblock %}
+
+{% block content %}
+    <span>{{ feed.feed_location }}</span>
+    <ul>
+    {% for link in feed.feed_content %}
+        <li><a href="{{ link[1] }}">{{ link[0] }}</a></li>
+    {% endfor %}
+    </ul>
+{% endblock %}
