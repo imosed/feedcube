@@ -3,11 +3,13 @@ from datetime import timedelta
 from re import match
 from xml.dom.minidom import parseString
 
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, redirect
+from flask_login import LoginManager, login_user, login_required, current_user
 from flask_mongoalchemy import MongoAlchemy
+from passlib.hash import argon2
 from requests import get
 
-from forms import addfeed, loginform
+from forms import addfeed, loginform, registerform
 from functions import get_fields_from_form, xml_to_dict, format_description, df
 
 app = Flask(__name__)
@@ -17,14 +19,23 @@ app.config['MONGOALCHEMY_DATABASE'] = 'feedcube'
 app.config['MONGOALCHEMY_SERVER_AUTH'] = False
 app.config['MONGOALCHEMY_PORT'] = 27018
 
+login_manager = LoginManager(app)
+UserLoader = login_manager.user_loader
+
 db = MongoAlchemy(app)
 
 
 class User(db.Document):
     username = db.StringField(max_length=20)
-    password = db.StringField(max_length=20)
+    password = db.StringField(max_length=150)
     email = db.StringField(max_length=40)
+    is_active = db.BoolField()
+    is_authenticated = db.BoolField()
+    is_anonymous = db.BoolField()
     date_registered = db.CreatedField()
+
+    def get_id(self):
+        return u'%s' % self.mongo_id
 
 
 class Feed(db.Document):
@@ -47,7 +58,14 @@ class FeedContent(db.Document):
 class AssignedFeed(db.Document):
     assigned_to = db.DocumentField(User)
     for_feed = db.DocumentField(Feed)
+    display_order = db.IntField(min_value=1)
     max_links = db.IntField(min_value=1, max_value=40)
+    date_assigned = db.CreatedField()
+
+
+@UserLoader
+def load_user(user_id):
+    return User.query.filter(User.mongo_id == user_id).first()
 
 
 @app.route('/')
@@ -55,13 +73,42 @@ def home():
     return "This is the homepage"
 
 
+@app.route('/register', methods=('GET', 'POST'))
+def register():
+    if request.method == 'GET':
+        form_fields = get_fields_from_form(registerform.Register())
+        return render_template('register.html', form=form_fields)
+    elif request.method == 'POST':
+        register_data = request.form
+        if not User.query.filter(User.username == register_data['username']).first():
+            new_user = User(username=register_data['username'], password=argon2.hash(register_data['password']),
+                            email=register_data['email_address'], is_active=True, is_authenticated=False,
+                            is_anonymous=False, date_registered=dt.utcnow())
+            new_user.save()
+            return redirect('/login')
+        else:
+            return redirect('/register')
+
+
 @app.route('/login', methods=('GET', 'POST'))
 def login():
-    form_fields = get_fields_from_form(loginform.Login())
-    return render_template('login.html', form=form_fields)
+    if request.method == 'GET':
+        form_fields = get_fields_from_form(loginform.Login())
+        return render_template('login.html', form=form_fields)
+    elif request.method == 'POST':
+        login_data = request.form
+        login_request = User.query.filter(User.username == login_data['username'])
+        if argon2.verify(login_data['password'], login_request.one().password):
+            user = login_request.one()
+            login_request.set(User.is_authenticated, True).execute()
+            login_user(user)
+            return redirect('/dashboard')
+    else:
+        return 'Something went wrong!'
 
 
 @app.route('/addfeed', methods=('GET', 'POST'))
+@login_required
 def add_feed():
     if request.method == 'POST':
         if match('https?://(?:[\w-]+\.)+(?:[a-zA-Z]{2,6})/.+', request.form['feed_location']):
@@ -87,6 +134,7 @@ def add_feed():
 
 
 @app.route('/viewfeed/<feed_id>')
+@login_required
 def view_feed(feed_id):
     feed_obj = Feed.query.filter(Feed.mongo_id == feed_id).one()
     if feed_obj.last_updated + timedelta(minutes=15) < dt.utcnow():
@@ -106,9 +154,20 @@ def view_feed(feed_id):
                     feed_content.save()
                 else:
                     break
-    feed_content_obj = FeedContent.query.filter(FeedContent.for_feed == feed_obj)
-    requested_feed_content = feed_content_obj.all()[:10]  # TODO: change to max_links later
+    feed_content_obj = FeedContent.query.filter(FeedContent.for_feed.mongo_id == feed_id)
+    requested_feed_content = feed_content_obj.descending('source_added').all()[:10]  # TODO: change to max_links later
     return render_template('viewfeed.html', feed_content=requested_feed_content)
+
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    all_feeds = AssignedFeed.query.ascending('display_order').all()
+    if all_feeds:
+        print(all_feeds)
+        return 'Dashboard'
+    else:
+        return 'Welcome, %s!' % current_user.username
 
 
 if __name__ == '__main__':
