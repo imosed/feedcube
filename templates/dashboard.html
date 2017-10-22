@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block page_title %}Feeds{% endblock %}
+
+{% block content %}
+    {% if feeds %}
+        <ul>
+            {% for feed in feeds %}
+                <li><a href="{{ feed.for_feed.feed_location }}">{{ feed.for_feed.feed_name }}</a></li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>There are no feeds yet!</p>
+    {% endif %}
+{% endblock %}

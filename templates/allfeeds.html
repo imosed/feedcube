@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    {% if feeds %}
+        <ul>
+        {% for feed in feeds %}
+            <li class="feed-listing"><a href="{{ feed.feed_location }}">{{ feed.feed_name }}</a></li>
+        {% endfor %}
+        </ul>
+    {% else %}
+        <p>There are no feeds yet!</p>
+    {% endif %}
+{% endblock %}

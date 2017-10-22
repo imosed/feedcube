@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}{% endblock %}</title>
-    <link rel="stylesheet" href="/static/css/forms.css" />
+    {% block styles %}
+    {% endblock %}
 </head>
 <body>
 <h1>{% block page_title %}{% endblock %}</h1>
