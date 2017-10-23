@@ -1,8 +1,16 @@
 {% extends 'base.html' %}
 
+{% block styles %}
+    <link rel="stylesheet" href="/static/css/allfeeds.css" />
+{% endblock %}
+
+{% block title %}Feeds{% endblock %}
+
+{% block page_title %}Feeds{% endblock %}
+
 {% block content %}
     {% if feeds %}
-        <ul>
+        <ul class="global-feeds">
         {% for feed in feeds %}
             <li class="feed-listing"><a href="{{ feed.feed_location }}">{{ feed.feed_name }}</a></li>
         {% endfor %}

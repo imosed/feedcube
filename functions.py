@@ -13,10 +13,18 @@ def get_fields_from_form(form):
 
 def xml_to_dict(element):
     #  Map XML values to a dictionary
-    return dict([(child.tagName, child.childNodes[0].data) for child in element.childNodes if child.nodeType == 1])
+    return dict([(child.tagName, child.childNodes[0].data)
+                 for child in element.childNodes
+                 if child.nodeType == 1 and child.childNodes and child.childNodes[0].nodeType in [3, 4]])
+
+
+def rescue_value(d, v, r):
+    if v in d:
+        return d[v]
+    else:
+        return r
 
 
 def format_description(desc, max_chars=500):
     #  Remove HTML tags and ensure only full words are displayed
-    return ' '.join(sub('<[^>]+(>|$)', '', desc)[:max_chars].split(' ')[:-1])
-
+    return ' '.join(sub('<\S[^>]*(>|$)', '', desc)[:max_chars].split(' ')[:-1])

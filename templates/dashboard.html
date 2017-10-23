@@ -1,17 +1,31 @@
 {% extends 'base.html' %}
 
+{% block styles %}
+    <link rel="stylesheet" href="/static/css/dashboard.css" />
+{% endblock %}
+
 {% block title %}Dashboard{% endblock %}
 
 {% block page_title %}Feeds{% endblock %}
 
 {% block content %}
     {% if feeds %}
-        <ul>
-            {% for feed in feeds %}
-                <li><a href="{{ feed.for_feed.feed_location }}">{{ feed.for_feed.feed_name }}</a></li>
-            {% endfor %}
-        </ul>
-    {% else %}
-        <p>There are no feeds yet!</p>
+        {% for feed in feeds %}
+            <a class="tile-link" href="/viewfeed/{{ feed.for_feed.mongo_id }}">
+                <span class="feed-tile">
+                    <div class="feed-image">
+                        <!--AJAX feed content here?-->
+                    </div>
+                    <span class="feed-source-title">{{ feed.for_feed.feed_name }}</span>
+                </span>
+            </a>
+        {% endfor %}
     {% endif %}
+    <a class="tile-link" href="/addfeed">
+        <span class="feed-tile">
+            <div class="feed-image add-feed-image">
+            </div>
+            <span class="feed-source-title">Add feed</span>
+        </span>
+    </a>
 {% endblock %}

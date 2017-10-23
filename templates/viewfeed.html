@@ -1,14 +1,14 @@
 {% extends 'base.html' %}
 
 {% block page_title %}
-{#    {{ feed.feed_name }}#}
+    {{ feed.feed_name }}
 {% endblock %}
 
 {% block content %}
 {#    <span>{{ feed.feed_location }}</span>#}
     <ul>
     {% for link in feed_content %}
-        <li><a href="{{ link.source_location }}">{{ link.source_title }}</a> by {{ link.source_author }} on {{ link.source_added }}</li>
+        <li><a href="{{ link.source_location }}">{{ link.source_title }}</a> by {{ link.source_author|title }} on {{ link.source_added }}</li>
     {% endfor %}
     </ul>
 {% endblock %}
