@@ -10,9 +10,11 @@ from passlib.hash import argon2
 from requests import get
 
 from forms import addfeed, loginform, registerform
-from functions import get_fields_from_form, xml_to_dict, format_description, df, rescue_value
+from functions import get_fields_from_form, xml_to_dict, format_description, df, rescue_value, gen_title
 
 app = Flask(__name__)
+app.jinja_env.trim_blocks = True
+app.jinja_env.lstrip_blocks = True
 app.config.from_object('config')
 
 app.config['MONGOALCHEMY_DATABASE'] = 'feedcube'
@@ -142,21 +144,24 @@ def add_feed():
                     if latest_feed_content:
                         prev_pub_date = latest_feed_content.source_added
                     else:
-                        prev_pub_date = 'Thurs, 01 Jan 1970 00:00:00 GMT'
+                        prev_pub_date = 'Thu, 01 Jan 1970 00:00:00 GMT'
                     for items in list(rss_items):
                         item_details = xml_to_dict(items)
-                        feed_content = FeedContent(
-                            for_feed=new_feed,
-                            source_author=rescue_value(item_details, 'dc:creator', request.form['feed_name']),
-                            source_title=item_details['title'],
-                            source_location=item_details['guid'],
-                            source_content=format_description(item_details['description']),
-                            source_added=dt.strptime(rescue_value(item_details, 'pubDate', prev_pub_date), df()),
-                            feed_added=dt.utcnow()
-                        )
-                        feed_content.save()
-                        if 'pubDate' in item_details:
-                            prev_pub_date = item_details['pubDate']
+                        if 'guid' in item_details:
+                            feed_content = FeedContent(
+                                for_feed=new_feed,
+                                source_author=rescue_value(item_details, 'dc:creator', request.form['feed_name']),
+                                source_title=rescue_value(item_details, 'title', gen_title(item_details['description'])),
+                                source_location=item_details['guid'],
+                                source_content=format_description(item_details['description']),
+                                source_added=dt.strptime(rescue_value(item_details, 'pubDate', prev_pub_date), df()),
+                                feed_added=dt.utcnow()
+                            )
+                            feed_content.save()
+                            if 'pubDate' in item_details:
+                                prev_pub_date = item_details['pubDate']
+                        else:
+                            continue
                     return redirect('/dashboard')
             else:
                 feed_to_add = Feed.query.filter(Feed.feed_location == request.form['feed_location'])
@@ -195,7 +200,7 @@ def view_feed(feed_id):
                     feed_content = FeedContent(
                         for_feed=feed_obj,
                         source_author=rescue_value(item_details, 'dc:creator', feed_obj.feed_name),
-                        source_title=item_details['title'],
+                        source_title=rescue_value(item_details, 'title', gen_title(item_details['description'])),
                         source_location=item_details['guid'],
                         source_content=format_description(item_details['description']),
                         source_added=dt.strptime(item_details['pubDate'], df()),
@@ -215,7 +220,13 @@ def view_feed(feed_id):
     else:
         num_max_links = 10
     requested_feed_content = feed_content_obj.descending('source_added').all()[:int(num_max_links)]
-    return render_template('viewfeed.html', feed=feed_obj, feed_content=requested_feed_content)
+    if request.is_xhr:
+        content_list = ''
+        for link in requested_feed_content:
+            content_list += '<li><a href="%s" target="_blank">%s</a></li>' % (link.source_location, link.source_title)
+        return '<ul class="rss-link-list">' + content_list + '</ul>'
+    else:
+        return render_template('viewfeed.html', feed=feed_obj, feed_content=requested_feed_content)
 
 
 @app.route('/allfeeds')
@@ -229,6 +240,18 @@ def all_feeds():
 def dashboard():
     all_feeds = AssignedFeed.query.ascending('display_order').all()
     return render_template('dashboard.html', feeds=all_feeds)
+
+
+@app.route('/unassignfeed/<feed_id>')
+@login_required
+def unassign_feed(feed_id):
+    assigned_feed = AssignedFeed.query.filter(
+        AssignedFeed.assigned_to.mongo_id == current_user.mongo_id
+    ).filter(
+        AssignedFeed.for_feed.mongo_id == feed_id
+    ).one()
+    AssignedFeed.remove(assigned_feed)
+    return '1'
 
 
 if __name__ == '__main__':

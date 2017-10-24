@@ -1,3 +1,10 @@
 body {
     font-family: sans-serif;
 }
+
+h1.main-page-title {
+    margin: 0;
+    padding: 0;
+    font-size: 5em;
+    font-family: 'Raleway', sans-serif;
+}

@@ -1,11 +1,13 @@
 html, body {
     height: 100%;
+    padding: 0;
+    margin: 0;
 }
 
 .feed-tile {
-    width: 8%;
-    height: 18%;
-    background-color: #e7e;
+    width: 24%;
+    height: 38%;
+    background-color: #ff404c;
     display: inline-block;
     padding: 8px;
     color: white;
@@ -19,15 +21,37 @@ html, body {
     max-width: 100%;
     display: block;
     font-weight: bold;
-    font-size: large;
+    font-size: 3em;
     vertical-align: bottom;
+    float: left;
     text-decoration: none !important;
+    font-family: 'Raleway', sans-serif;
 }
 
-.feed-image {
-    width: 100%;
+.feed-content {
+    width: 99%;
     height: 86%;
-    background-color: #c5c;
+    background-color: #c7323c;
+    border: #ccc thin solid;
+}
+
+.content-section {
+    padding: 0 0 0 6px;
+}
+
+.rss-link-list {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}
+
+.rss-link-list li {
+    margin: 8px 0;
+}
+
+.rss-link-list li a {
+    color: #fff;
+    text-decoration: none !important;
 }
 
 .add-feed-image {
@@ -39,4 +63,8 @@ html, body {
 
 .tile-link {
     text-decoration: none !important;
+}
+
+.remove-feed {
+    cursor: pointer;
 }

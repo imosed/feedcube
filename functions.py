@@ -25,6 +25,12 @@ def rescue_value(d, v, r):
         return r
 
 
+def gen_title(s):
+    title = ' '.join(s.split(' ')[:18])
+    title = ' '.join(title[:130].split(' ')[:-1])
+    return '%s...' % title
+
+
 def format_description(desc, max_chars=500):
     #  Remove HTML tags and ensure only full words are displayed
     return ' '.join(sub('<\S[^>]*(>|$)', '', desc)[:max_chars].split(' ')[:-1])

@@ -2,6 +2,7 @@
 
 {% block styles %}
     <link rel="stylesheet" href="/static/css/dashboard.css" />
+    <link rel="stylesheet" href="/static/css/simple-scrollbar.css" />
 {% endblock %}
 
 {% block title %}Dashboard{% endblock %}
@@ -10,22 +11,29 @@
 
 {% block content %}
     {% if feeds %}
+        <!--
         {% for feed in feeds %}
-            <a class="tile-link" href="/viewfeed/{{ feed.for_feed.mongo_id }}">
-                <span class="feed-tile">
-                    <div class="feed-image">
-                        <!--AJAX feed content here?-->
-                    </div>
-                    <span class="feed-source-title">{{ feed.for_feed.feed_name }}</span>
-                </span>
-            </a>
-        {% endfor %}
+         --><span class="feed-tile assigned-feed">
+                <div class="feed-content content-section" ss-container data-feed-id="{{ feed.for_feed.mongo_id }}">
+                    <!--AJAX feed content here?-->
+                </div>
+                <div class="link-container">
+                    <a class="tile-link" href="/viewfeed/{{ feed.for_feed.mongo_id }}">
+                        <span class="feed-source-title">{{ feed.for_feed.feed_name }}</span>
+                    </a>
+                </div>
+            </span><!--
+        {% endfor %}-->
     {% endif %}
+    <span class="feed-tile">
     <a class="tile-link" href="/addfeed">
-        <span class="feed-tile">
-            <div class="feed-image add-feed-image">
-            </div>
-            <span class="feed-source-title">Add feed</span>
-        </span>
+        <div class="feed-content add-feed-image">
+        </div>
+        <span class="feed-source-title">Add feed</span>
     </a>
+    </span>
+    <script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="/static/js/simple-scrollbar.js"></script>
+    <script type="text/javascript" src="/static/js/feedcontent.js"></script>
+    <script type="text/javascript" src="/static/js/dbfunc.js"></script>
 {% endblock %}

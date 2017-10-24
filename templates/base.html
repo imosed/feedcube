@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <title>{% block title %}{% endblock %}</title>
     <link rel="stylesheet" href="/static/css/global.css" />
+    <link href="https://fonts.googleapis.com/css?family=Raleway:900" rel="stylesheet">
     {% block styles %}
     {% endblock %}
 </head>
 <body>
-<h1>{% block page_title %}{% endblock %}</h1>
+<h1 class="main-page-title">{% block page_title %}{% endblock %}</h1>
 {% block content %}
 {% endblock %}
 </body>

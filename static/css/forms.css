@@ -1,4 +1,24 @@
 .form-field label {
-    min-width: 6em;
+    font-size: 2em;
     display: inline-block;
+}
+
+.form-field {
+    margin: 2% 0;
+}
+
+.form-container {
+    width: 40%;
+    margin: 8% auto;
+}
+
+.form-field input {
+    width: 100%;
+    font-size: 2em;
+}
+
+.sub-button {
+    font-size: 2em;
+    width: 22%;
+    float: right;
 }
