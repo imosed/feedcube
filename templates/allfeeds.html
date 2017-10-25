@@ -12,10 +12,17 @@
     {% if feeds %}
         <ul class="global-feeds">
         {% for feed in feeds %}
-            <li class="feed-listing"><a href="{{ feed.feed_location }}">{{ feed.feed_name }}</a></li>
+            <li class="feed-listing">
+                <a href=" {{ url_for('view_feed', feed_id=feed.mongo_id) }} " data-feed-id="{{ feed.mongo_id }}">{{ feed.feed_name }}</a>
+                {% if not feed.mongo_id in assigned_feed_ids %}
+                    <span class="add-feed">&plus;</span>
+                {% endif %}
+            </li>
         {% endfor %}
         </ul>
     {% else %}
         <p>There are no feeds yet!</p>
     {% endif %}
+    <script type="text/javascript" src="/static/js/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="/static/js/affunc.js"></script>
 {% endblock %}

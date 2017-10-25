@@ -5,7 +5,6 @@ $('.assigned-feed').each(function() {
         var removeButton = document.createElement('div');
         $(removeButton).html('&times;');
         $(removeButton).attr('class', 'remove-feed');
-        $(removeButton).css('width', '56px').css('height', '56px').css('font-size', '3em').css('float', 'right').css('color', '#fff');
         $(removeButton).click(function() {
             var uaReq = $.ajax('/unassignfeed/' + feedId, {async: false});
             if (uaReq.responseText === '1') {

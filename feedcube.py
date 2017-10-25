@@ -232,7 +232,9 @@ def view_feed(feed_id):
 @app.route('/allfeeds')
 def all_feeds():
     global_feeds = Feed.query.descending('date_added').all()
-    return render_template('allfeeds.html', feeds=global_feeds)
+    user_assigned_feeds = AssignedFeed.query.filter(AssignedFeed.assigned_to.mongo_id == current_user.mongo_id).all()
+    user_assigned_feed_ids = [x.for_feed.mongo_id for x in user_assigned_feeds]
+    return render_template('allfeeds.html', feeds=global_feeds, assigned_feed_ids=user_assigned_feed_ids)
 
 
 @app.route('/dashboard')
@@ -251,6 +253,30 @@ def unassign_feed(feed_id):
         AssignedFeed.for_feed.mongo_id == feed_id
     ).one()
     AssignedFeed.remove(assigned_feed)
+    feeds_assigned = AssignedFeed.query.filter(
+        AssignedFeed.assigned_to.mongo_id == current_user.mongo_id
+    ).ascending('display_order').all()
+    for feed in enumerate(feeds_assigned):
+        af_to_update = AssignedFeed.query.filter(
+            AssignedFeed.assigned_to.mongo_id == current_user.mongo_id
+        ).filter(
+            AssignedFeed.display_order == feed[1].display_order
+        )
+        af_to_update.set(AssignedFeed.display_order, feed[0] + 1).execute()
+    return '1'
+
+
+@app.route('/assignfeed/<feed_id>')
+@login_required
+def assign_feed(feed_id):
+    assigned_feed_query = AssignedFeed.query.filter(AssignedFeed.assigned_to.mongo_id == current_user.mongo_id).all()
+    feed_to_assign = AssignedFeed(
+        assigned_to=User.query.filter(User.mongo_id == current_user.mongo_id).one(),
+        for_feed=Feed.query.filter(Feed.mongo_id == feed_id).one(),
+        display_order=len(assigned_feed_query) + 1,
+        max_links=10
+    )
+    feed_to_assign.save()
     return '1'
 
 

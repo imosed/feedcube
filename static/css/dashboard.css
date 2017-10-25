@@ -37,6 +37,7 @@ html, body {
 
 .content-section {
     padding: 0 0 0 6px;
+    display: block;
 }
 
 .rss-link-list {
@@ -67,4 +68,10 @@ html, body {
 
 .remove-feed {
     cursor: pointer;
+    text-align: center;
+    width: 56px;
+    height: 56px;
+    font-size: 3em;
+    float: right;
+    color: #fff;
 }

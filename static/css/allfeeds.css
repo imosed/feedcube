@@ -6,11 +6,19 @@
 
 .feed-listing {
     font-weight: bold;
-    background-color: #cc55cc;
+    background-color: #ff404c;
     padding: 4px 4px;
 }
 
 .feed-listing a {
     color: #fff;
     text-decoration: none !important;
+}
+
+.add-feed {
+    font-weight: bold;
+    display: block;
+    float: right;
+    color: #fff;
+    cursor: pointer;
 }
