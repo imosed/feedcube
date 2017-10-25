@@ -4,9 +4,15 @@ html, body {
     margin: 0;
 }
 
-.feed-tile {
-    width: 24%;
+.feed-tiles-container {
     height: 38%;
+    background-color: #ff404c;
+    display: flex;
+}
+
+.feed-tile {
+    width: 25%;
+    height: 95%;
     background-color: #ff404c;
     display: inline-block;
     padding: 8px;
