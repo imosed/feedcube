@@ -82,11 +82,11 @@ def register():
         return render_template('register.html', form=form_fields)
     elif request.method == 'POST':
         register_data = request.form
-        if not User.query.filter(User.username == register_data['username']).first():
+        if not User.query.filter(User.username == register_data.get('username')).first():
             new_user = User(
-                username=register_data['username'],
-                password=argon2.hash(register_data['password']),
-                email=register_data['email_address'],
+                username=register_data.get('username'),
+                password=argon2.hash(register_data.get('password')),
+                email=register_data.get('email_address'),
                 is_active=True,
                 is_authenticated=False,
                 is_anonymous=False,
@@ -105,8 +105,8 @@ def login():
         return render_template('login.html', form=form_fields)
     elif request.method == 'POST':
         login_data = request.form
-        login_request = User.query.filter(User.username == login_data['username'])
-        if argon2.verify(login_data['password'], login_request.one().password):
+        login_request = User.query.filter(User.username == login_data.get('username'))
+        if argon2.verify(login_data.get('password'), login_request.one().password):
             user = login_request.one()
             login_request.set(User.is_authenticated, True).execute()
             login_user(user)
@@ -119,15 +119,16 @@ def login():
 @login_required
 def add_feed():
     if request.method == 'POST':
-        if match('https?://(?:[\w-]+\.)+(?:[a-zA-Z]{2,6})/.+', request.form['feed_location']):
-            if not Feed.query.filter(Feed.feed_location == request.form['feed_location']).all():
-                rss_req = get(request.form['feed_location'])
+        if match('https?://(?:[\w-]+\.)+(?:[a-zA-Z]{2,6})/.+', request.form.get('feed_location')):
+            if not Feed.query.filter(Feed.feed_location == request.form.get('feed_location')).all():
+                print('Making request')
+                rss_req = get(request.form.get('feed_location'))
                 if rss_req.status_code == 200:
                     rss_xml = parseString(rss_req.content)
-                    rss_items = rss_xml.getElementsByTagName('item')
+                    rss_items = rss_xml.getElementsByTagName('item') + rss_xml.getElementsByTagName('entry')
                     new_feed = Feed(
-                        feed_name=request.form['feed_name'],
-                        feed_location=request.form['feed_location'],
+                        feed_name=request.form.get('feed_name'),
+                        feed_location=request.form.get('feed_location'),
                         last_updated=dt.utcnow()
                     )
                     new_feed.save()
@@ -147,24 +148,44 @@ def add_feed():
                         prev_pub_date = 'Thu, 01 Jan 1970 00:00:00 GMT'
                     for items in list(rss_items):
                         item_details = xml_to_dict(items)
-                        if 'guid' in item_details:
-                            feed_content = FeedContent(
-                                for_feed=new_feed,
-                                source_author=rescue_value(item_details, 'dc:creator', request.form['feed_name']),
-                                source_title=rescue_value(item_details, 'title', gen_title(item_details['description'])),
-                                source_location=item_details['guid'],
-                                source_content=format_description(item_details['description']),
-                                source_added=dt.strptime(rescue_value(item_details, 'pubDate', prev_pub_date), df()),
-                                feed_added=dt.utcnow()
-                            )
-                            feed_content.save()
-                            if 'pubDate' in item_details:
-                                prev_pub_date = item_details['pubDate']
+                        # ------------ #
+                        feed_content = FeedContent(
+                            for_feed=new_feed,
+                            source_author=rescue_value(
+                                item_details.get('dc:creator'),
+                                item_details.get('author'),
+                                request.form.get('feed_name')
+                            ),
+                            source_title=rescue_value(
+                                item_details.get('title'),
+                                gen_title(format_description(item_details.get('description'))),
+                                gen_title(format_description(item_details.get('content')))
+                            ),
+                            source_location=rescue_value(
+                                item_details.get('guid'),
+                                item_details.get('href'),
+                                request.host
+                            ),
+                            source_content=rescue_value(
+                                format_description(item_details.get('description')),
+                                format_description(item_details.get('content'))
+                            ),
+                            source_added=df(rescue_value(
+                                item_details.get('pubDate'),
+                                item_details.get('updated'),
+                                prev_pub_date)
+                            ),
+                            feed_added=dt.utcnow()
+                        )
+                        # ------------ #
+                        feed_content.save()
+                        if 'pubDate' in item_details or 'updated' in item_details:
+                            prev_pub_date = rescue_value(item_details.get('pubDate'), item_details.get('updated'))
                         else:
                             continue
                     return redirect('/dashboard')
             else:
-                feed_to_add = Feed.query.filter(Feed.feed_location == request.form['feed_location'])
+                feed_to_add = Feed.query.filter(Feed.feed_location == request.form.get('feed_location'))
                 af_query = AssignedFeed.query.filter(AssignedFeed.assigned_to.mongo_id == current_user.mongo_id)
                 assign_feed = AssignedFeed(
                     assigned_to=User.query.filter(User.mongo_id == current_user.mongo_id).one(),
@@ -196,14 +217,32 @@ def view_feed(feed_id):
             rss_items = rss_xml.getElementsByTagName('item')
             for items in list(rss_items):
                 item_details = xml_to_dict(items)
-                if dt.strptime(item_details['pubDate'], df()) > latest_entry:
+                if df(rescue_value(item_details.get('pubDate'), item_details.get('updated'))) > latest_entry:
                     feed_content = FeedContent(
                         for_feed=feed_obj,
-                        source_author=rescue_value(item_details, 'dc:creator', feed_obj.feed_name),
-                        source_title=rescue_value(item_details, 'title', gen_title(item_details['description'])),
-                        source_location=item_details['guid'],
-                        source_content=format_description(item_details['description']),
-                        source_added=dt.strptime(item_details['pubDate'], df()),
+                        source_author=rescue_value(
+                            item_details.get('dc:creator'),
+                            item_details.get('author'),
+                            feed_obj.feed_name
+                        ),
+                        source_title=rescue_value(
+                            item_details.get('title'),
+                            gen_title(format_description(item_details.get('description'))),
+                            gen_title(format_description(item_details.get('content')))
+                        ),
+                        source_location=rescue_value(
+                            item_details.get('guid'),
+                            item_details.get('href'),
+                            request.host
+                        ),
+                        source_content=rescue_value(
+                            format_description(item_details.get('description')),
+                            format_description(item_details.get('content'))
+                        ),
+                        source_added=df(rescue_value(
+                            item_details.get('pubDate'),
+                            item_details.get('updated'))
+                        ),
                         feed_added=dt.utcnow()
                     )
                     feed_content.save()
@@ -260,9 +299,9 @@ def unassign_feed(feed_id):
         af_to_update = AssignedFeed.query.filter(
             AssignedFeed.assigned_to.mongo_id == current_user.mongo_id
         ).filter(
-            AssignedFeed.display_order == feed[1].display_order
+            AssignedFeed.display_order == feed.get(1).display_order
         )
-        af_to_update.set(AssignedFeed.display_order, feed[0] + 1).execute()
+        af_to_update.set(AssignedFeed.display_order, feed.get(0) + 1).execute()
     return '1'
 
 

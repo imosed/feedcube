@@ -5,7 +5,7 @@ html, body {
 }
 
 .feed-tiles-container {
-    min-height: 38%;
+    height: 38%;
     background-color: #ff404c;
     display: flex;
 }
