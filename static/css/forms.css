@@ -12,9 +12,15 @@
     margin: 8% auto;
 }
 
-.form-field input {
+.form-field input[type="text"] {
     width: 100%;
     font-size: 2em;
+}
+
+.form-field input[type="checkbox"] {
+    width: 2em;
+    height: 2em;
+    float: right;
 }
 
 .sub-button {

@@ -16,6 +16,7 @@ def get_fields_from_form(form):
 
 
 def find_data(parent_node):
+    #  Find descendant text node
     node = parent_node
     while node.childNodes and node.childNodes[0].nodeType not in [3, 4]:
         node = node.childNodes[0]
@@ -29,7 +30,7 @@ def xml_to_dict(element):
     for child in element.childNodes:
         if child.nodeType == 1 and child.childNodes and child.childNodes[0].nodeType in [3, 4]:
             vals += [(child.tagName, find_data(child.childNodes[0]))]
-        if child.hasAttributes():
+        if child.nodeType == 1 and child.hasAttributes():
             attrs += child.attributes.items()
     vals = dict(vals)
     attrs = dict(attrs)
@@ -38,6 +39,7 @@ def xml_to_dict(element):
 
 
 def rescue_value(v, *rv):
+    #  If v doesn't exist, return the first rv that does
     if v:
         return v
     for val in rv:
@@ -48,6 +50,7 @@ def rescue_value(v, *rv):
 
 
 def gen_title(s):
+    #  Prepare a title from another string
     if s:
         title = ' '.join(s.split(' ')[:18])
         title = ' '.join(title[:130].split(' ')[:-1])

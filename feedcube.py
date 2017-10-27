@@ -9,7 +9,7 @@ from flask_mongoalchemy import MongoAlchemy
 from passlib.hash import argon2
 from requests import get
 
-from forms import addfeed, loginform, registerform
+from forms import addfeed, loginform, registerform, editfeed
 from functions import get_fields_from_form, xml_to_dict, format_description, df, rescue_value, gen_title
 
 app = Flask(__name__)
@@ -133,14 +133,14 @@ def add_feed():
                     )
                     new_feed.save()
                     af_query = AssignedFeed.query.filter(AssignedFeed.assigned_to.mongo_id == current_user.mongo_id)
-                    assign_feed = AssignedFeed(
+                    new_assigned_feed = AssignedFeed(
                         assigned_to=User.query.filter(User.mongo_id == current_user.mongo_id).one(),
                         for_feed=new_feed,
                         display_order=len(af_query.all()) + 1,
                         max_links=10,
                         date_assigned=dt.utcnow()
                     )
-                    assign_feed.save()
+                    new_assigned_feed.save()
                     latest_feed_content = FeedContent.query.descending('source_added').first()
                     if latest_feed_content:
                         prev_pub_date = latest_feed_content.source_added
@@ -148,7 +148,6 @@ def add_feed():
                         prev_pub_date = 'Thu, 01 Jan 1970 00:00:00 GMT'
                     for items in list(rss_items):
                         item_details = xml_to_dict(items)
-                        # ------------ #
                         feed_content = FeedContent(
                             for_feed=new_feed,
                             source_author=rescue_value(
@@ -177,7 +176,6 @@ def add_feed():
                             ),
                             feed_added=dt.utcnow()
                         )
-                        # ------------ #
                         feed_content.save()
                         if 'pubDate' in item_details or 'updated' in item_details:
                             prev_pub_date = rescue_value(item_details.get('pubDate'), item_details.get('updated'))
@@ -197,7 +195,7 @@ def add_feed():
                 assign_feed.save()
                 return redirect('/dashboard')
         else:
-            print('Invalid URL!')
+            return 'Invalid URL!'
     form_fields = get_fields_from_form(addfeed.AddFeed())
     return render_template('addfeed.html', form=form_fields)
 
@@ -205,8 +203,10 @@ def add_feed():
 @app.route('/viewfeed/<feed_id>')
 @login_required
 def view_feed(feed_id):
-    feed_obj = Feed.query.filter(Feed.mongo_id == feed_id).one()
+    feed_query = Feed.query.filter(Feed.mongo_id == feed_id)
+    feed_obj = feed_query.one()
     if feed_obj.last_updated + timedelta(minutes=15) < dt.utcnow():
+        feed_query.set(Feed.last_updated, dt.utcnow()).execute()
         if FeedContent.query.all():
             latest_entry = FeedContent.query.descending('source_added').first().source_added
         else:
@@ -214,7 +214,7 @@ def view_feed(feed_id):
         rss_req = get(feed_obj.feed_location)
         if rss_req.status_code == 200:
             rss_xml = parseString(rss_req.content)
-            rss_items = rss_xml.getElementsByTagName('item')
+            rss_items = rss_xml.getElementsByTagName('item') + rss_xml.getElementsByTagName('entry')
             for items in list(rss_items):
                 item_details = xml_to_dict(items)
                 if df(rescue_value(item_details.get('pubDate'), item_details.get('updated'))) > latest_entry:
@@ -283,6 +283,34 @@ def dashboard():
     return render_template('dashboard.html', feeds=all_feeds)
 
 
+@app.route('/editfeed/<feed_id>', methods=('GET', 'POST'))
+@login_required
+def edit_feed(feed_id):
+    queried_feed = AssignedFeed.query.filter(AssignedFeed.for_feed.mongo_id == feed_id)
+    if request.method == 'GET':
+        max_links = queried_feed.first().max_links
+        display_order = queried_feed.first().display_order
+        assigned = bool(queried_feed.all())
+        items = zip(get_fields_from_form(editfeed.EditFeed()), [max_links, display_order, assigned])
+        return render_template('editfeed.html', form=items)
+    elif request.method == 'POST':
+        form_data = request.form
+        if form_data.get('max_links').isdigit() and form_data.get('display_order').isdigit():
+            feeds_to_change = queried_feed.filter(AssignedFeed.display_order >= form_data.get('display_order')).all()
+            for feed in feeds_to_change:
+                ftc_query = AssignedFeed.query.filter(AssignedFeed.mongo_id == feed.mongo_id)
+                ftc_query.set(AssignedFeed.display_order, ftc_query.display_order + 1).execute()
+            queried_feed.set(AssignedFeed.max_links, int(form_data.get('max_links'))).execute()
+            queried_feed.set(AssignedFeed.display_order, int(form_data.get('display_order'))).execute()
+        else:
+            return redirect('/editfeed/' + feed_id)
+        if not form_data.get('assign_feed'):
+            af_to_remove = AssignedFeed.query.filter(AssignedFeed.for_feed.mongo_id == feed_id).first()
+            if af_to_remove:
+                AssignedFeed.remove(af_to_remove)
+        return redirect(url_for('dashboard'))
+
+
 @app.route('/unassignfeed/<feed_id>')
 @login_required
 def unassign_feed(feed_id):
@@ -299,9 +327,9 @@ def unassign_feed(feed_id):
         af_to_update = AssignedFeed.query.filter(
             AssignedFeed.assigned_to.mongo_id == current_user.mongo_id
         ).filter(
-            AssignedFeed.display_order == feed.get(1).display_order
+            AssignedFeed.display_order == feed[1].display_order
         )
-        af_to_update.set(AssignedFeed.display_order, feed.get(0) + 1).execute()
+        af_to_update.set(AssignedFeed.display_order, feed[0] + 1).execute()
     return '1'
 
 
